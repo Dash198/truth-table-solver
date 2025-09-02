@@ -218,10 +218,10 @@ module tb;
         
         for(i = 0; i < 32; i = i + 1) begin
             {A, B, C, D, E} = i;
-            #5
+            #5;
         end
     
-        $finish
+        $finish;
     end
 endmodule"""
 
