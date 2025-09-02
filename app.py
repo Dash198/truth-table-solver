@@ -5,7 +5,7 @@ import itertools
 
 st.title('Truth Table Solver')
 
-n_vars = st.selectbox('Vars',options=[2,3,4,5])
+n_vars = st.selectbox('Vars',options=[2,3,4])
 
 st.write(f"You selected **{n_vars}** variables.")
 
@@ -25,7 +25,7 @@ edited_df = st.data_editor(
     df,
     num_rows="fixed",
     column_config={
-        "Y": st.column_config.SelectboxColumn("Y", options=["0","1"], required=True)
+        "Y": st.column_config.SelectboxColumn("Y", options=["0","1","X"], required=True)
     }
 )
 
@@ -33,7 +33,7 @@ if(st.button("Solve K-Map")):
     edited_df.columns = vars + ['Y']
     if(n_vars==2):
         
-        kmap, expr, code, tb = solve_truth_table_2(edited_df)
+        kmap, expr, code, tb, img = solve_truth_table_2(edited_df)
         st.write("### K-map (Rows = B, Cols = A)")
         st.dataframe(kmap)
         st.write("### Expression")
@@ -41,14 +41,16 @@ if(st.button("Solve K-Map")):
         latex_expr = expr.replace("&", r"\cdot") \
                         .replace("|", r"+") \
 
-        st.latex(f'{latex_expr}')
+        st.latex(f'Y = {latex_expr}')
         st.write("### Verilog")
         st.code(code, language="verilog")
         st.write("### Testbench Code")
         st.code(tb, language="verilog")
+        st.write("### Circuit Diagram")
+        st.markdown(img, unsafe_allow_html=True)
     
     elif n_vars==3:
-        kmap, expr, code, tb = solve_truth_table_3(edited_df)
+        kmap, expr, code, tb, img = solve_truth_table_3(edited_df)
         st.write("### K-map (Rows = C, Cols = AB)")
         st.dataframe(kmap)
         st.write("### Expression")
@@ -56,14 +58,16 @@ if(st.button("Solve K-Map")):
         latex_expr = expr.replace("&", r"\cdot") \
                         .replace("|", r"+") \
 
-        st.latex(f'{latex_expr}')
+        st.latex(f'Y = {latex_expr}')
         st.write("### Verilog")
         st.code(code, language="verilog")
         st.write("### Testbench Code")
         st.code(tb, language="verilog")
+        st.write("### Circuit Diagram")
+        st.markdown(img, unsafe_allow_html=True)
     
     elif n_vars==4:
-        kmap, expr, code, tb = solve_truth_table_4(edited_df)
+        kmap, expr, code, tb, img = solve_truth_table_4(edited_df)
         st.write("### K-map (Rows = CD, Cols = AB)")
         st.dataframe(kmap)
         st.write("### Expression")
@@ -71,14 +75,16 @@ if(st.button("Solve K-Map")):
         latex_expr = expr.replace("&", r"\cdot") \
                         .replace("|", r"+") \
 
-        st.latex(f'{latex_expr}')
+        st.latex(f'Y = {latex_expr}')
         st.write("### Verilog")
         st.code(code, language="verilog")
         st.write("### Testbench Code")
         st.code(tb, language="verilog")
+        st.write("### Circuit Diagram")
+        st.markdown(img, unsafe_allow_html=True)
 
     if n_vars == 5:
-        kmap, expr, code, tb = solve_truth_table_5(edited_df)
+        kmap, expr, code, tb, img = solve_truth_table_5(edited_df)
         st.write("### K-map (Rows = CD, Cols = AB, E=0)")
         st.dataframe(kmap[0])
         st.write("### K-map (Rows = CD, Cols = AB, E=1)")
@@ -88,9 +94,11 @@ if(st.button("Solve K-Map")):
         latex_expr = expr.replace("&", r"\cdot") \
                         .replace("|", r"+") \
 
-        st.latex(f'{latex_expr}')
+        st.latex(f'Y = {latex_expr}')
 
         st.write("### Verilog")
         st.code(code, language="verilog")
         st.write("### Testbench Code")
         st.code(tb, language="verilog")
+        st.write("### Circuit Diagram")
+        st.markdown(img, unsafe_allow_html=True)

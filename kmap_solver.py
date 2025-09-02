@@ -1,4 +1,7 @@
 import pandas as pd
+import numpy as np
+import schemdraw
+from schemdraw.parsing import logicparse
 
 def determine_state(var, value):
     if value=='1':
@@ -22,7 +25,6 @@ def gen_boolean_map(vars, row_order, col_order):
     return pd.DataFrame(b_map)
 
 def infix_to_postfix(expr):
-    print('Expr:',expr)
     precedence = {'~':3, '&':2, '|':1}
     tokens = expr.replace('(', ' ( ').replace(')',' ) ').split()
     output, stack = [], []
@@ -225,8 +227,8 @@ endmodule"""
 
     return out
 
-def make_minterms(TRUTH_TABLE):
-    M = TRUTH_TABLE[TRUTH_TABLE['Y']=='1'].drop(['Y'],axis=1)
+def make_minterms(TRUTH_TABLE,val='1'):
+    M = TRUTH_TABLE[TRUTH_TABLE['Y']==val].drop(['Y'],axis=1)
     m,n = M.shape
     minterms = []
     for i in range(m):
@@ -360,46 +362,111 @@ def make_sop(implicants, vars):
     # join implicants with OR
     return " | ".join(terms)
 
+def special_case_check(TRUTH_TABLE):
+    ys = TRUTH_TABLE["Y"].unique()
+
+    # All 0s (and maybe X)
+    if set(ys) <= {"0", "X"}:
+        return True, "0"
+
+    # All 1s (and maybe X)
+    if set(ys) <= {"1", "X"}:
+        return True, "1"
+
+    return False, None
+
+def sop_to_python(expr):
+    import re
+    expr = re.sub(r"([A-Z])'", r"(not \1)", expr)
+
+    expr = expr.replace("&", " and ")
+    expr = expr.replace("|", " or ")
+
+    return expr
+
+def draw_ckt_diag(expr):
+    expr = sop_to_python(expr)
+    with schemdraw.Drawing(show=False) as d:
+        logicparse(expr, outlabel='Y')
+    svg = d.get_imagedata('svg').decode()
+
+    svg = svg.replace(
+        "<svg ",
+        '<svg style="background-color:white;" '
+    )
+    return svg
+
+
 def solve_kmap(TRUTH_TABLE, vars):
     mt = make_minterms(TRUTH_TABLE)
-    prime_implicants = get_prime_implicants(mt)
+    mx = make_minterms(TRUTH_TABLE,val='X')
+    prime_implicants = get_prime_implicants(mt+mx)
     chart = create_implicant_chart(prime_implicants,mt)
     ess = select_implicants(chart,mt)
     return make_sop(ess,vars)
 
 def solve_truth_table_2(TRUTH_TABLE):
     kmap = gen_2_kmap(TRUTH_TABLE)
+    tb = gen_tb_2()
+    special, val = special_case_check(TRUTH_TABLE)
+    if special:
+        code = f"""module f(input A, input B, output Y);
+    assign Y = {"1'b0" if val=='0' else "1'b1"};
+endmodule"""
+        return kmap, val, code, tb, None
+        
     expr = solve_kmap(TRUTH_TABLE,'AB')
     code = postfix_to_verilog(infix_to_postfix(expr))
-    tb = gen_tb_2()
-
-    return kmap, expr, code, tb
+    img = draw_ckt_diag(expr)
+    return kmap, expr, code, tb, img
 
 def solve_truth_table_3(TRUTH_TABLE):
     kmap = gen_3_kmap(TRUTH_TABLE)
-    expr = solve_kmap(TRUTH_TABLE,'ABC')
-    code = postfix_to_verilog(infix_to_postfix(expr),vars=['A','B','C'])
     tb = gen_tb_3()
 
-    return kmap,expr,code, tb
+    special, val = special_case_check(TRUTH_TABLE)
+    if special:
+        code = f"""module f(input A, input B, input C output Y);
+    assign Y = {"1'b0" if val=='0' else "1'b1"};
+endmodule"""
+        return kmap, val, code, tb, None
+    expr = solve_kmap(TRUTH_TABLE,'ABC')
+    code = postfix_to_verilog(infix_to_postfix(expr),vars=['A','B','C'])
+    img = draw_ckt_diag(expr)
+    return kmap,expr,code, tb, img
 
 def solve_truth_table_4(TRUTH_TABLE):
     kmap = gen_4_kmap(TRUTH_TABLE)
+    tb = gen_tb_4()
+    special, val = special_case_check(TRUTH_TABLE)
+    if special:
+        code = f"""module f(input A, input B, input C, input D, output Y);
+    assign Y = {"1'b0" if val=='0' else "1'b1"};
+endmodule"""
+        return kmap, val, code, tb, None
     expr = solve_kmap(TRUTH_TABLE,'ABCD')
     code = postfix_to_verilog(infix_to_postfix(expr),vars='ABCD')
-    tb = gen_tb_4()
-
-    return kmap, expr, code, tb
+    img = draw_ckt_diag(expr)
+    return kmap, expr, code, tb, img
 
 def solve_truth_table_5(TRUTH_TABLE):
     t0 = TRUTH_TABLE[TRUTH_TABLE['E']=='0'].reset_index(drop=True)
     t1 = TRUTH_TABLE[TRUTH_TABLE['E']=='1'].reset_index(drop=True)
 
+    special, val = special_case_check(TRUTH_TABLE)
+    if special:
+        kmap = gen_4_kmap(t1 if val=='1' else t0)
+        code = f"""module f(input A, input B, input C, input D, input E, output Y);
+    assign Y = {"1'b0" if val=='0' else "1'b1"};
+endmodule"""
+        return ((kmap,None) if val=='0' else (None,kmap)), val, code, tb, None
+
     k0,_,_ = solve_truth_table_4(t0)
     k1,_,_ = solve_truth_table_4(t1)
 
     expr = solve_kmap(TRUTH_TABLE,'ABCDE')
+    
     code = postfix_to_verilog(infix_to_postfix(expr), vars=list("ABCDE"))
     tb = gen_tb_5()
-
-    return (k0,k1), expr, code, tb
+    img = draw_ckt_diag(expr)
+    return (k0,k1), expr, code, tb, img
