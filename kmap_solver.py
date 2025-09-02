@@ -128,10 +128,10 @@ module tb;
         
         for(i = 0; i < 4; i = i + 1) begin
             {A, B} = i;
-            #5
+            #5;
         end
     
-        $finish
+        $finish;
     end
 endmodule"""
 
@@ -157,10 +157,10 @@ module tb;
         
         for(i = 0; i < 8; i = i + 1) begin
             {A, B, C} = i;
-            #5
+            #5;
         end
     
-        $finish
+        $finish;
     end
 endmodule"""
 
@@ -187,10 +187,10 @@ module tb;
         
         for(i = 0; i < 16; i = i + 1) begin
             {A, B, C, D} = i;
-            #5
+            #5;
         end
     
-        $finish
+        $finish;
     end
 endmodule"""
 
