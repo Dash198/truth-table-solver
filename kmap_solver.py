@@ -21,17 +21,8 @@ def gen_boolean_map(vars, row_order, col_order):
     
     return pd.DataFrame(b_map)
 
-def solve_kmap(kmap,bmap):
-    m,n = kmap.shape
-    expr = ""
-    for i in range(m):
-        for j in range(n):
-            if(kmap.iloc[i,j]=="1"):
-                expr += "(" + bmap.iloc[i,j] + ")" + " | "
-
-    return expr[:-3]
-
 def infix_to_postfix(expr):
+    print('Expr:',expr)
     precedence = {'~':3, '&':2, '|':1}
     tokens = expr.replace('(', ' ( ').replace(')',' ) ').split()
     output, stack = [], []
@@ -234,10 +225,151 @@ endmodule"""
 
     return out
 
+def make_minterms(TRUTH_TABLE):
+    M = TRUTH_TABLE[TRUTH_TABLE['Y']=='1'].drop(['Y'],axis=1)
+    m,n = M.shape
+    minterms = []
+    for i in range(m):
+        mt = ""
+        ones = 0
+        for j in range(n):
+            mt += str(M.iloc[i,j])
+            ones += 1
+        if ones>0:
+            minterms.append(mt)
+    return minterms
+
+def get_prime_implicants(minterms):
+    prime_implicants = []
+    merges = [False for _ in range(len(minterms))]
+    n_merges = 0
+    merged_mt, mt1, mt2 = "", "", ""
+
+    for i in range(len(minterms)):
+        for c in range(i+1,len(minterms)):
+            mt1 = minterms[i]
+            mt2 = minterms[c]
+            if dashes_align(mt1, mt2) and one_bit_diff_no_dash(mt1, mt2):
+                merged_mt = merge_minterms(mt1, mt2)
+                if merged_mt not in prime_implicants:
+                    prime_implicants.append(merged_mt)
+                n_merges += 1
+                merges[i] = True
+                merges[c] = True
+
+    for j in range(len(minterms)):
+        if merges[j]==False and minterms[j] not in prime_implicants:
+            prime_implicants.append(minterms[j])
+        
+    if n_merges==0:
+        return prime_implicants
+    else:
+        return get_prime_implicants(prime_implicants)
+    
+def one_bit_diff_no_dash(a: str, b: str) -> bool:
+  diff = 0
+  for c1, c2 in zip(a, b):
+      if c1 != c2:
+          if c1 == '-' or c2 == '-':
+              return False
+          diff += 1
+          if diff > 1:
+              return False
+  return diff == 1
+
+def merge_minterms(a: str, b: str) -> str | None:
+  if not one_bit_diff_no_dash(a, b):
+      return None
+  # exactly one real-bit difference → put '-' there
+  out = []
+  for c1, c2 in zip(a, b):
+      out.append('-' if c1 != c2 else c1)
+  return ''.join(out)
+
+
+def dashes_align(mt1,mt2):
+    for i in range(len(mt1)):
+        if mt1[i]!='-' and mt2[i]=='-':
+            return False
+    
+    return True
+
+def int_expr(mt):
+    i = 0
+    for c in mt:
+        i *= 10
+        if c=='-':
+            continue
+        i += (c-'0')
+    return i
+
+def create_implicant_chart(prime_implicants, minterms):
+    chart = {}
+    for pi in prime_implicants:
+        row = "".join("1" if covers(pi, m) else "0" for m in minterms)
+        chart[pi] = row
+    return chart
+
+
+def covers(mask: str, mint: str) -> bool:
+    return all(mc == '-' or mc == xc for mc, xc in zip(mask, mint))
+
+def select_implicants(chart, minterms):
+    selected = []
+    covered = set()
+
+    # Step 1: essential implicants
+    for j, mt in enumerate(minterms):
+        covering = [pi for pi, row in chart.items() if row[j] == "1"]
+        if len(covering) == 1:
+            epi = covering[0]
+            if epi not in selected:
+                selected.append(epi)
+            for k, bit in enumerate(chart[epi]):
+                if bit == "1":
+                    covered.add(minterms[k])
+
+    # Step 2 + 3: greedy cover
+    while len(covered) < len(minterms):
+        # find best PI covering most uncovered
+        best_pi = max(
+            chart.keys(),
+            key=lambda pi: sum(1 for k, mt in enumerate(minterms)
+                               if chart[pi][k] == "1" and mt not in covered)
+        )
+        selected.append(best_pi)
+        for k, mt in enumerate(minterms):
+            if chart[best_pi][k] == "1":
+                covered.add(mt)
+
+    return selected
+
+def make_sop(implicants, vars):
+    terms = []
+    for implicant in implicants:
+        literals = []
+        for i, bit in enumerate(implicant):
+            if bit == '-':
+                continue
+            if bit == '1':
+                literals.append(vars[i])
+            elif bit == '0':
+                literals.append(vars[i] + "'")
+        # join literals in this implicant with AND
+        terms.append(" & ".join(literals))
+    # join implicants with OR
+    return " | ".join(terms)
+
+def solve_kmap(TRUTH_TABLE, vars):
+    mt = make_minterms(TRUTH_TABLE)
+    prime_implicants = get_prime_implicants(mt)
+    chart = create_implicant_chart(prime_implicants,mt)
+    ess = select_implicants(chart,mt)
+    return make_sop(ess,vars)
+
 def solve_truth_table_2(TRUTH_TABLE):
     kmap = gen_2_kmap(TRUTH_TABLE)
-    bmap = gen_boolean_map("AB",['0','1'],['0','1'])
-    expr = solve_kmap(kmap,bmap)
+    expr = solve_kmap(TRUTH_TABLE,'AB')
     code = postfix_to_verilog(infix_to_postfix(expr))
     tb = gen_tb_2()
 
@@ -245,8 +377,7 @@ def solve_truth_table_2(TRUTH_TABLE):
 
 def solve_truth_table_3(TRUTH_TABLE):
     kmap = gen_3_kmap(TRUTH_TABLE)
-    bmap = gen_boolean_map("ABC",['0','1'],['00','01','11','10'])
-    expr = solve_kmap(kmap,bmap)
+    expr = solve_kmap(TRUTH_TABLE,'ABC')
     code = postfix_to_verilog(infix_to_postfix(expr),vars=['A','B','C'])
     tb = gen_tb_3()
 
@@ -254,8 +385,7 @@ def solve_truth_table_3(TRUTH_TABLE):
 
 def solve_truth_table_4(TRUTH_TABLE):
     kmap = gen_4_kmap(TRUTH_TABLE)
-    bmap = gen_boolean_map('ABCD',['00','01','11','10'],['00','01','11','10'])
-    expr = solve_kmap(kmap,bmap)
+    expr = solve_kmap(TRUTH_TABLE,'ABCD')
     code = postfix_to_verilog(infix_to_postfix(expr),vars='ABCD')
     tb = gen_tb_4()
 
@@ -265,10 +395,10 @@ def solve_truth_table_5(TRUTH_TABLE):
     t0 = TRUTH_TABLE[TRUTH_TABLE['E']=='0'].reset_index(drop=True)
     t1 = TRUTH_TABLE[TRUTH_TABLE['E']=='1'].reset_index(drop=True)
 
-    k0,e0,_ = solve_truth_table_4(t0)
-    k1,e1,_ = solve_truth_table_4(t1)
+    k0,_,_ = solve_truth_table_4(t0)
+    k1,_,_ = solve_truth_table_4(t1)
 
-    expr = f"(E' & {e0}) | (E & {e1})"
+    expr = solve_kmap(TRUTH_TABLE,'ABCDE')
     code = postfix_to_verilog(infix_to_postfix(expr), vars=list("ABCDE"))
     tb = gen_tb_5()
 
