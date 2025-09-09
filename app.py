@@ -27,7 +27,7 @@ edited_df = st.data_editor(
     df,
     num_rows="fixed",
     column_config={
-        "Y": st.column_config.SelectboxColumn("Y", options=["0","1","X"], required=True)
+        "Y": st.column_config.SelectboxColumn("Y", options=["0","1"], required=True)
     }
 )
 
