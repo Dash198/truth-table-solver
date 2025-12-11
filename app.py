@@ -7,7 +7,7 @@ import numpy as np
 
 st.title('Truth Table Solver')
 
-n_vars = st.selectbox('Vars',options=[2,3,4])
+n_vars = st.selectbox('Vars',options=[2,3,4,5])
 
 st.write(f"You selected **{n_vars}** variables.")
 
@@ -160,20 +160,34 @@ if(st.button("Solve K-Map")):
 
     if n_vars == 5:
         kmap, expr, code, tb, img = solve_truth_table_5(edited_df)
-        st.write("### K-map (Rows = CD, Cols = AB, E=0)")
-        st.dataframe(kmap[0])
-        st.write("### K-map (Rows = CD, Cols = AB, E=1)")
-        st.dataframe(kmap[1])
-        st.write("### Expression")
-        # Convert your symbols to LaTeX
+        
         latex_expr = expr.replace("&", r"\cdot") \
-                        .replace("|", r"+") \
+                        .replace("|", r"+")
 
-        st.latex(f'Y = {latex_expr}')
+        tab1, tab2, tab3 = st.tabs(
+        ["Expression", "Verilog", "Diagrams"]
+        )
 
-        st.write("### Verilog")
-        st.code(code, language="verilog")
-        st.write("### Testbench Code")
-        st.code(tb, language="verilog")
-        st.write("### Circuit Diagram")
-        st.markdown(img, unsafe_allow_html=True)
+        with tab1:
+            st.write("### K-map (Rows = CD, Cols = AB, E=0)")
+            st.dataframe(kmap[0])
+            st.write("### K-map (Rows = CD, Cols = AB, E=1)")
+            st.dataframe(kmap[1])
+
+            st.write("### Expression")
+            st.latex(f'Y = {latex_expr}')
+
+        with tab2:
+            st.write("### Verilog")
+            st.code(code, language="verilog")
+            st.download_button('Download Code (f.v)',code,file_name='f.v')
+            st.write("### Testbench")
+            st.code(tb, language="verilog")
+            st.download_button('Download Code (f_tb.v)',tb,file_name='f_tb.v')
+
+        with tab3:
+            st.write("### Circuit Diagram")
+            st.markdown(img, unsafe_allow_html=True)
+
+            st.write("### Waveform")
+            st.pyplot(plot_waveform(vars, edited_df))

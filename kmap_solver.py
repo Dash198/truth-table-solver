@@ -450,9 +450,10 @@ endmodule"""
     return kmap, expr, code, tb, img
 
 def solve_truth_table_5(TRUTH_TABLE):
-    t0 = TRUTH_TABLE[TRUTH_TABLE['E']=='0'].reset_index(drop=True)
-    t1 = TRUTH_TABLE[TRUTH_TABLE['E']=='1'].reset_index(drop=True)
+    t0 = TRUTH_TABLE[TRUTH_TABLE['E'].isin([0, '0'])].drop('E', axis=1).reset_index(drop=True)
+    t1 = TRUTH_TABLE[TRUTH_TABLE['E'].isin([1, '1'])].drop('E', axis=1).reset_index(drop=True)
 
+    tb = gen_tb_5()
     special, val = special_case_check(TRUTH_TABLE)
     if special:
         kmap = gen_4_kmap(t1 if val=='1' else t0)
@@ -461,8 +462,8 @@ def solve_truth_table_5(TRUTH_TABLE):
 endmodule"""
         return ((kmap,None) if val=='0' else (None,kmap)), val, code, tb, None
 
-    k0,_,_ = solve_truth_table_4(t0)
-    k1,_,_ = solve_truth_table_4(t1)
+    k0 = solve_truth_table_4(t0)[0]
+    k1 = solve_truth_table_4(t1)[0]
 
     expr = solve_kmap(TRUTH_TABLE,'ABCDE')
     
