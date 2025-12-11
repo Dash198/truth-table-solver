@@ -167,8 +167,7 @@ if(st.button("Solve K-Map")):
         tab1, tab2, tab3 = st.tabs(
         ["Expression", "Verilog", "Diagrams"]
         )
-
-<<<<<<< HEAD
+        
         with tab1:
             st.write("### K-map (Rows = CD, Cols = AB, E=0)")
             st.dataframe(kmap[0])
@@ -192,11 +191,3 @@ if(st.button("Solve K-Map")):
 
             st.write("### Waveform")
             st.pyplot(plot_waveform(vars, edited_df))
-=======
-        st.write("### Verilog")
-        st.code(code, language="verilog")
-        st.write("### Testbench Code")
-        st.code(tb, language="verilog")
-        st.write("### Circuit Diagram")
-        st.markdown(img, unsafe_allow_html=True)
->>>>>>> ce013d40cfb4de0b9856eae7c7fe3daef3771f46
