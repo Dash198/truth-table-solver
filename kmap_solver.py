@@ -282,7 +282,6 @@ def one_bit_diff_no_dash(a: str, b: str) -> bool:
 def merge_minterms(a: str, b: str) -> str | None:
   if not one_bit_diff_no_dash(a, b):
       return None
-  # exactly one real-bit difference → put '-' there
   out = []
   for c1, c2 in zip(a, b):
       out.append('-' if c1 != c2 else c1)
@@ -331,9 +330,7 @@ def select_implicants(chart, minterms):
                 if bit == "1":
                     covered.add(minterms[k])
 
-    # Step 2 + 3: greedy cover
     while len(covered) < len(minterms):
-        # find best PI covering most uncovered
         best_pi = max(
             chart.keys(),
             key=lambda pi: sum(1 for k, mt in enumerate(minterms)
@@ -357,19 +354,15 @@ def make_sop(implicants, vars):
                 literals.append(vars[i])
             elif bit == '0':
                 literals.append(vars[i] + "'")
-        # join literals in this implicant with AND
         terms.append(" & ".join(literals))
-    # join implicants with OR
     return " | ".join(terms)
 
 def special_case_check(TRUTH_TABLE):
     ys = TRUTH_TABLE["Y"].unique()
 
-    # All 0s (and maybe X)
     if set(ys) <= {"0", "X"}:
         return True, "0"
 
-    # All 1s (and maybe X)
     if set(ys) <= {"1", "X"}:
         return True, "1"
 
