@@ -11,18 +11,13 @@ n_vars = st.selectbox('Vars',options=[2,3,4,5])
 
 st.write(f"You selected **{n_vars}** variables.")
 
-
-# Step 2: generate variable names automatically
 vars = [chr(ord('A')+i) for i in range(n_vars)]
 
-# Step 3: generate all input combinations
 combinations = list(itertools.product([0,1], repeat=n_vars))
 df = pd.DataFrame(combinations, columns=vars)
 
-# Add output column
 df["Y"] = ""
 
-# Step 4: let user edit the outputs
 edited_df = st.data_editor(
     df,
     num_rows="fixed",
@@ -39,19 +34,18 @@ def plot_waveform(vars, truth_table):
 
     fig, ax = plt.subplots(len(vars)+1, 1, figsize=(8, 2*(n+1)), sharex=True)
 
-    # Generate timeline with an extra point for the final hold
     t = np.arange(rows+1)
 
     for i, var in enumerate(vars):
         y = truth_table[var].astype(int).to_numpy()
-        y = np.append(y, y[-1])   # repeat last value
+        y = np.append(y, y[-1])
         ax[i].step(t, y, where='post')
         ax[i].set_ylabel(var)
         ax[i].set_yticks([0,1])
-        ax[i].set_xlim(0, rows)  # make sure axis shows full length
+        ax[i].set_xlim(0, rows)
 
     y = truth_table["Y"].astype(int).to_numpy()
-    y = np.append(y, y[-1])       # repeat last value
+    y = np.append(y, y[-1])       
     ax[-1].step(t, y, where='post', color='red')
     ax[-1].set_ylabel("Y")
     ax[-1].set_yticks([0,1])
@@ -167,7 +161,7 @@ if(st.button("Solve K-Map")):
         tab1, tab2, tab3 = st.tabs(
         ["Expression", "Verilog", "Diagrams"]
         )
-        
+
         with tab1:
             st.write("### K-map (Rows = CD, Cols = AB, E=0)")
             st.dataframe(kmap[0])
